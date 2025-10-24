@@ -1,0 +1,5 @@
+{
+  "name": "Invoice Generator",
+  "description": "A web application that allows users to create, customize, and download professional invoices in PDF format, based on a provided template.",
+  "requestFramePermissions": []
+}
