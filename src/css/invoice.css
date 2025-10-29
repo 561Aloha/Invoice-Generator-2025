@@ -365,3 +365,22 @@
   flex-direction: column;
   align-items: center;
 }
+
+.shadow-none .no-print {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+.page-title-1{
+  text-align: left;
+}
+
+.download-btn{
+  width: 175px;
+}

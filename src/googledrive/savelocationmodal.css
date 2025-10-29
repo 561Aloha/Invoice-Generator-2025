@@ -1,0 +1,240 @@
+.save-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.save-modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 100%;
+  padding: 32px;
+  position: relative;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.save-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.save-modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.save-modal-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.save-modal-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.save-modal-header p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.save-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.save-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  text-align: left;
+}
+
+.save-option-btn:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.save-option-btn.disconnected {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.save-option-btn.disconnected:hover {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.save-option-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f3f4f6;
+  transition: all 0.2s;
+}
+
+.save-option-btn.local .save-option-icon {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.save-option-btn.local:hover .save-option-icon {
+  background: #3b82f6;
+  color: white;
+}
+
+.save-option-btn.drive .save-option-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.save-option-btn.drive:hover .save-option-icon {
+  background: #16a34a;
+  color: white;
+}
+
+.save-option-btn.drive.disconnected .save-option-icon {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.save-option-btn.both .save-option-icon {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.save-option-btn.both:hover .save-option-icon {
+  background: #9333ea;
+  color: white;
+}
+
+.save-option-text {
+  flex: 1;
+}
+
+.save-option-text h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.save-option-text p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.save-option-text .connect-prompt {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.connect-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #fbbf24;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .save-modal-content {
+    padding: 24px;
+  }
+
+  .save-modal-header h2 {
+    font-size: 20px;
+  }
+
+  .save-option-btn {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .save-option-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .save-option-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .save-option-text h3 {
+    font-size: 16px;
+  }
+
+  .save-option-text p {
+    font-size: 13px;
+  }
+}

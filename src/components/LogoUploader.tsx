@@ -1,45 +1,263 @@
-
-import React, { useRef } from 'react';
+import { useState } from 'react';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 
 interface LogoUploaderProps {
-  logoUrl: string | null;
-  onLogoChange: (url: string) => void;
+  userId: string;
+  currentLogoUrl?: string | null;
+  onLogoUploaded: (url: string) => void;
 }
 
-const LogoUploader: React.FC<LogoUploaderProps> = ({ logoUrl, onLogoChange }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const LogoUploader = ({ userId, currentLogoUrl, onLogoUploaded }: LogoUploaderProps) => {
+  const [uploading, setUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(currentLogoUrl || '');
+  const [error, setError] = useState('');
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleLogoClick = () => {
-    fileInputRef.current?.click();
+  const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+  const MAX_SIZE = 200;
+  const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+  const resizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject('Canvas context not available');
+            return;
+          }
+
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = (height * MAX_SIZE) / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = (width * MAX_SIZE) / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.9);
+          const base64Data = resizedBase64.split(',')[1];
+          resolve(base64Data);
+        };
+
+        img.onerror = () => {
+          reject('Failed to load image');
+        };
+
+        img.src = e.target?.result as string;
+      };
+
+      reader.onerror = () => {
+        reject('Failed to read file');
+      };
+
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onLogoChange(reader.result as string);
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    setUploading(true);
+
+    try {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError('Invalid file type. Please upload JPG, PNG, GIF, or WEBP images.');
+        setUploading(false);
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File too large. Please upload an image under 5MB.');
+        setUploading(false);
+        return;
+      }
+
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      
+      img.onload = async () => {
+        URL.revokeObjectURL(objectUrl);
+
+        // CHECK BUT DON'T RETURN - let upload continue
+        const isSmallImage = img.width < 100 || img.height < 100;
+        if (isSmallImage) {
+          // Show warning temporarily but don't block upload
+          setError('Image is quite small. Uploading anyway...');
+        }
+
+        try {
+          const base64Image = await resizeImage(file);
+          const formData = new FormData();
+          formData.append('image', base64Image);
+
+          const response = await fetch(
+            `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            const uploadedUrl = data.data.url;
+            setLogoUrl(uploadedUrl);
+
+            await setDoc(doc(db, 'users', userId), {
+              logoUrl: uploadedUrl,
+            }, { merge: true });
+
+            onLogoUploaded(uploadedUrl);
+            
+            // ✅ ALWAYS clear error on success, even if image was small
+            setError('');
+            alert('✅ Logo uploaded successfully!');
+          } else {
+            setError('Upload failed. Please try again.');
+          }
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError);
+          setError('Upload error. Please try again.');
+        } finally {
+          setUploading(false);
+        }
       };
-      reader.readAsDataURL(file);
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        setError('Failed to load image. Please try a different file.');
+        setUploading(false);
+      };
+
+      img.src = objectUrl;
+
+    } catch (error) {
+      console.error('Error processing image:', error);
+      setError('Error processing image. Please try again.');
+      setUploading(false);
     }
   };
-
   return (
-    <div className="flex flex-col items-center justify-center cursor-pointer group" onClick={handleLogoClick}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+      {/* Upload Area */}
+      <label
+        htmlFor="logo-upload"
+        style={{
+          width: '200px',
+          height: '200px',
+          border: logoUrl && !isHovered ? 'none' : '2px dashed #d1d5db',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: uploading ? 'not-allowed' : 'pointer',
+          backgroundColor: logoUrl ? 'transparent' : '#f9fafb',
+          transition: 'all 0.2s',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+        onMouseEnter={() => {
+          setIsHovered(true);
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false);
+        }}
+      >
+        {logoUrl ? (
+          <>
+            <img
+              src={logoUrl}
+              alt="Logo"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+              }}
+            />
+            {/* Hover overlay */}
+            {isHovered && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '8px',
+                color: 'white',
+              }}>
+                <AttachFileIcon style={{ fontSize: 40 }} />
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: '500' }}>
+                  Change Logo
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#6b7280' }}>
+            <AttachFileIcon style={{ fontSize: 48, marginBottom: '8px' }} />
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: '500' }}>
+              {uploading ? 'Uploading...' : 'Upload Logo'}
+            </p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+              200x200 recommended
+            </p>
+          </div>
+        )}
+      </label>
+
       <input
+        id="logo-upload"
         type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-        accept="image/*"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        onChange={handleLogoUpload}
+        disabled={uploading}
+        style={{ display: 'none' }}
       />
-      {logoUrl ? (
-        <img src={logoUrl} alt="Company Logo" className="max-w-full max-h-28 object-contain" />
-      ) : (
-        <div className="w-48 h-28 bg-gray-200 flex flex-col items-center justify-center text-gray-500 rounded-lg border-2 border-dashed border-gray-300 group-hover:bg-gray-300 group-hover:border-gray-400">
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          <span>Upload Logo</span>
-        </div>
+
+      {/* Status Messages */}
+      {uploading && (
+        <p style={{ margin: 0, fontSize: '14px', color: '#2563eb' }}>
+          Processing and uploading...
+        </p>
+      )}
+
+      {error && (
+        <p style={{ 
+          margin: 0, 
+          fontSize: '13px', 
+          color: error.includes('small') ? '#f59e0b' : '#ef4444',
+          textAlign: 'center',
+          maxWidth: '250px'
+        }}>
+          {error}
+        </p>
       )}
     </div>
   );
