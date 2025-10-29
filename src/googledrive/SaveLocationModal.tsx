@@ -1,5 +1,5 @@
 import React from 'react';
-import './SaveLocationModal.css';
+import './savelocationmodal.css';
 
 interface SaveLocationModalProps {
   open: boolean;
